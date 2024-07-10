@@ -35,7 +35,7 @@ jobs:
       with:
         #only push for main branch
         push: ${{ github.ref == 'refs/heads/main' }}
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
         labels: |
           org.opencontainers.image.title=Voxmeter MariaDB
           org.opencontainers.image.description=Voxmeter MariaDB
