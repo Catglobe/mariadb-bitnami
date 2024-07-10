@@ -27,7 +27,7 @@ jobs:
     - name: Extract version
       id: extract_version
 
-      run: echo img_version:$(grep -oP 'FROM bitnami/mariadb:\K[^@\s]+' Dockerfile) >> $GITHUB_ENV
+      run: echo img_version=$(grep -oP 'FROM bitnami/mariadb:\K[^@\s]+' Dockerfile) >> $GITHUB_ENV
     - name: Build
       uses: docker/build-push-action@v6
       with:
