@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true 
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+    - name: Log in to the Container registry
+      uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+    #extract the version from the Dockerfile to match the FROM bitnami/mariadb:11.2.4-debian-12-r42@SHA... -> 11.2.4-debian-12-r42
+    - name: Extract version
+      id: extract_version
+
+      run: echo img_version:$(grep -oP 'FROM bitnami/mariadb:\K[^@\s]+' Dockerfile) >> $GITHUB_ENV
+    - name: Build
+      uses: docker/build-push-action@v6
+      with:
+        #only push for main branch
+        push: ${{ github.ref == 'refs/heads/main' }}
+        platforms: linux/${{ matrix.platform }}
+        labels: |
+          org.opencontainers.image.title=Voxmeter MariaDB
+          org.opencontainers.image.description=Voxmeter MariaDB
+          org.opencontainers.image.vendor=Voxmeter A/S
+          org.opencontainers.image.licenses=MIT
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/mariadb:${{ env.img_version }}
+    
