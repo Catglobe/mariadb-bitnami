@@ -3,7 +3,6 @@
   "extends": [
     "config:best-practices",
     "schedule:weekends",
-    "schedule:automergeWeekends",
     ":semanticCommits"
   ],
   "prConcurrentLimit": 0,
