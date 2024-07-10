@@ -1,6 +1,7 @@
 #!/bin/bash
-    
-set -e
+
+# set to fail if anything fails
+set -euo pipefail
 cd /mnt/backup/
 
 # Define output variables
@@ -13,33 +14,41 @@ log_with_timestamp() {
 
 determine_next_backup() {
     # Current date minus one hour
-    current_date=$(date -d "-1 hour" +"%Y-%m-%d %H:%M:%S")
-    current_date_unix=$(date -d "$current_date" +%s)
+    current_date=$(date -u -d "-1 hour" +"%Y-%m-%d %H:%M:%S")
+    current_date_unix=$(date -u -d "$current_date" +%s)
 
     # Check for monthly backup
+    backup_type="monthly-$(date -u +"%Y%m")"
+    extra_params=("--extra-lsndir=monthly")
     if [ -f "monthly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" monthly/mariadb_backup_info | awk -F ' = ' '{print $2}')
-        start_time_unix=$(date -d "$start_time" +%s)
-        if [ $(date -d "$current_date -1 month" +%s) -ge $start_time_unix ]; then
-            backup_type="monthly-$(date -d "$start_time" +"%Y%m")"
-            extra_params=("--extra-lsndir=monthly")
+        start_time_unix=$(date -u -d "$start_time" +%s)
+        if [ $(date -u -d "$current_date -1 month" +%s) -ge $start_time_unix ]; then
+            # It is time for the monthly backup
             return
         fi
+    else
+        # If there is no monthly backup, create one
+        return
     fi
 
     # Check for weekly backup
+    backup_type="weekly-$(date -u +"%Y%m%d")"
+    extra_params=("--incremental-basedir=monthly" "--incremental-basedir=monthly")
     if [ -f "weekly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" weekly/mariadb_backup_info | awk -F ' = ' '{print $2}')
-        start_time_unix=$(date -d "$start_time" +%s)
-        if [ $(date -d "$current_date -7 days" +%s) -ge $start_time_unix ]; then
-            backup_type="weekly-$(date -d "$start_time" +"%Y%m%d")"
-            extra_params=("--extra-lsndir=weekly" "--incremental-basedir=monthly")
+        start_time_unix=$(date -u -d "$start_time" +%s)
+        if [ $(date -u -d "$current_date -7 days" +%s) -ge $start_time_unix ]; then
+            # It is time for the weekly backup
             return
         fi
+    else
+        # If there is no weekly backup, create one
+        return
     fi
 
     # Default to daily backup
-    backup_type="daily-$(date +"%Y%m%d")"
+    backup_type="daily-$(date -u +"%Y%m%d")"
     extra_params=("--incremental-basedir=weekly")
 }
 
@@ -63,7 +72,7 @@ log_with_timestamp "Done Saving backup to /mnt/backup/$backup_type.zstd"
 # Save to S3
 log_with_timestamp "Uploading backup to s3://$S3_URL/"
 STORAGE_CLASS=${STORAGE_CLASS:-DEEP_ARCHIVE}
-aws-bin/aws s3 --no-progress cp $backup_type.zstd s3://$S3_URL/ --storage-class $STORAGE_CLASS
+aws s3 --no-progress cp $backup_type.zstd s3://$S3_URL/ --storage-class $STORAGE_CLASS
 log_with_timestamp "Done uploading backup to s3://$S3_URL/"
 
 # Function to delete old backups based on filename date
