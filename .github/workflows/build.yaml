@@ -11,12 +11,14 @@ concurrency:
 jobs:
   Build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [amd64, arm64]
     steps:
     - name: Checkout
       uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     - name: Log in to the Container registry
       uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3
       with:
@@ -33,7 +35,7 @@ jobs:
       with:
         #only push for main branch
         push: ${{ github.ref == 'refs/heads/main' }}
-        platforms: linux/${{ matrix.platform }}
+        platforms: linux/amd64,linux/arm64
         labels: |
           org.opencontainers.image.title=Voxmeter MariaDB
           org.opencontainers.image.description=Voxmeter MariaDB
