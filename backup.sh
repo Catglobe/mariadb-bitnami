@@ -18,18 +18,20 @@ determine_next_backup() {
     current_date_unix=$(date -u -d "$current_date" +%s)
 
     # Check for monthly backup
-    backup_type="monthly-$(date -u +"%Y%m")"
+    backup_type="monthly-$(date -u +"%Y%m%d")"
     extra_params=("--extra-lsndir=monthly")
     if [ -f "monthly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" monthly/mariadb_backup_info | awk -F ' = ' '{print $2}')
         start_time_unix=$(date -u -d "$start_time" +%s)
         if [ $(date -u -d "$current_date -1 month" +%s) -ge $start_time_unix ]; then
             # It is time for the monthly backup
-            return
+            # also ensure that tomorrow, we do a new weekly
+            rm -rf weekly
+            return 0
         fi
     else
         # If there is no monthly backup, create one
-        return
+        return 0
     fi
 
     # Check for weekly backup
@@ -40,16 +42,17 @@ determine_next_backup() {
         start_time_unix=$(date -u -d "$start_time" +%s)
         if [ $(date -u -d "$current_date -7 days" +%s) -ge $start_time_unix ]; then
             # It is time for the weekly backup
-            return
+            return 0
         fi
     else
         # If there is no weekly backup, create one
-        return
+        return 0
     fi
 
     # Default to daily backup
     backup_type="daily-$(date -u +"%Y%m%d")"
     extra_params=("--incremental-basedir=weekly")
+    return 0
 }
 
 # Call the check_backup function
@@ -86,7 +89,7 @@ delete_old_backups() {
     # Extract dates from filenames and store them in the array
     for file in $backup_prefix-*.zstd; do
         filename=$(basename "$file")
-        date_str=$(echo "$filename" | grep -oP "$backup_prefix-\K\d{6,8}")
+        date_str=$(echo "$filename" | grep -oP "$backup_prefix-\K\d{8}")
         if [[ -n $date_str ]]; then
             backup_files["$file"]=$date_str
         fi
