@@ -19,7 +19,6 @@ determine_next_backup() {
     if [ -f "monthly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" monthly/mariadb_backup_info | awk -F ' = ' '{print $2}')
         start_time_unix=$(date -u -d "$start_time" +%s)
-        echo "here"
         if [ $(date -u -d "-1 hour -1 month" +"%s") -ge $start_time_unix ]; then
             # It is time for the monthly backup
             # also ensure that tomorrow, we do a new weekly
