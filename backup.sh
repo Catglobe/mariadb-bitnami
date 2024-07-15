@@ -13,17 +13,14 @@ log_with_timestamp() {
 }
 
 determine_next_backup() {
-    # Current date minus one hour
-    current_date=$(date -u -d "-1 hour" +"%Y-%m-%d %H:%M:%S")
-    current_date_unix=$(date -u -d "$current_date" +%s)
-
     # Check for monthly backup
     backup_type="monthly-$(date -u +"%Y%m%d")"
     extra_params=("--extra-lsndir=monthly")
     if [ -f "monthly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" monthly/mariadb_backup_info | awk -F ' = ' '{print $2}')
         start_time_unix=$(date -u -d "$start_time" +%s)
-        if [ $(date -u -d "$current_date -1 month" +%s) -ge $start_time_unix ]; then
+        echo "here"
+        if [ $(date -u -d "-1 hour -1 month" +"%s") -ge $start_time_unix ]; then
             # It is time for the monthly backup
             # also ensure that tomorrow, we do a new weekly
             rm -rf weekly
@@ -40,7 +37,7 @@ determine_next_backup() {
     if [ -f "weekly/mariadb_backup_info" ]; then
         start_time=$(grep "start_time" weekly/mariadb_backup_info | awk -F ' = ' '{print $2}')
         start_time_unix=$(date -u -d "$start_time" +%s)
-        if [ $(date -u -d "$current_date -7 days" +%s) -ge $start_time_unix ]; then
+        if [ $(date -u -d "-1 hour -1 week" +"%s") -ge $start_time_unix ]; then
             # It is time for the weekly backup
             return 0
         fi
