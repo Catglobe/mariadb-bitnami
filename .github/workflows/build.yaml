@@ -31,7 +31,7 @@ jobs:
 
       run: echo img_version=$(grep -oP 'FROM bitnami/mariadb:\K[^@\s]+' Dockerfile) >> $GITHUB_ENV
     - name: Build
-      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6
+      uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85 # v6
       with:
         #only push for main branch
         push: ${{ github.ref == 'refs/heads/main' }}
