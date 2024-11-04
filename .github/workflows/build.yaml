@@ -56,7 +56,7 @@ jobs:
           echo "Updating Dockerfile with tag: $tag"
           sed -i "s|^FROM bitnami/mariadb:.*|FROM bitnami/mariadb:$tag|" Dockerfile
           echo "Building and pushing tag: $tag"
-          docker build --platform linux/amd64,linux/arm64 \
+          docker build buildx --platform linux/amd64,linux/arm64 \
             --tag ${{ secrets.DOCKER_USERNAME }}/mariadb:$tag \
             --push .
         done
