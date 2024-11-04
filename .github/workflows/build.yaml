@@ -53,16 +53,10 @@ jobs:
           exit 0
         fi
 
-    - name: Find missing tags
-      id: find_missing_tags
-      run: |
-        missing_tags=$(comm -23 <(sort source_tags.txt) <(sort dest_tags.txt))
-        echo "missing_tags=$missing_tags" >> $GITHUB_ENV
-        echo "Missing tags: $missing_tags"
-
     - name: Build and Push Missing Tags
       if: env.missing_tags != ''
       run: |
+        missing_tags=$(comm -23 <(sort source_tags.txt) <(sort dest_tags.txt))
         for tag in $missing_tags; do
           echo "Updating Dockerfile with tag: $tag"
           sed -i "s|^FROM bitnami/mariadb:.*|FROM bitnami/mariadb:$tag|" Dockerfile
