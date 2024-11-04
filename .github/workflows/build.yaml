@@ -25,22 +25,53 @@ jobs:
         registry: docker.io
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
-    #extract the version from the Dockerfile to match the FROM bitnami/mariadb:11.2.4-debian-12-r42@SHA... -> 11.2.4-debian-12-r42
-    - name: Extract version
-      id: extract_version
+    #we totally ignore the docker tag in the Dockerfile, since the autoupgrader may be skipping version
+    - name: Fetch recent tags from source
+      id: fetch_source_tags
+      run: |
+        curl -s "https://hub.docker.com/v2/repositories/bitnami/mariadb/tags/?page_size=100" | \
+        jq -r '.results | sort_by(.last_updated) | reverse | map(select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+-debian-12"))) | .[].name' > source_tags.txt
 
-      run: echo img_version=$(grep -oP 'FROM bitnami/mariadb:\K[^@\s]+' Dockerfile) >> $GITHUB_ENV
-    - name: Build
-      uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6
-      with:
-        #only push for main branch
-        push: ${{ github.ref == 'refs/heads/main' }}
-        platforms: ${{ github.ref == 'refs/heads/main' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
-        labels: |
-          org.opencontainers.image.title=Voxmeter MariaDB
-          org.opencontainers.image.description=Voxmeter MariaDB
-          org.opencontainers.image.vendor=Voxmeter A/S
-          org.opencontainers.image.licenses=MIT
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/mariadb:${{ env.img_version }}
-    
+    - name: Debug: Show fetched source tags
+      run: |
+        echo "Source tags fetched:"
+        cat source_tags.txt
+
+    - name: Check if source tags list is empty
+      id: check_source_tags
+      run: |
+        if [ ! -s source_tags.txt ]; then
+          echo "No tags matching debian-12 found, skipping build."
+          exit 0
+        fi
+
+    - name: Fetch destination tags
+      id: fetch_dest_tags
+      run: |
+        curl -s "https://hub.docker.com/v2/repositories/catglobe/mariadb/tags/?page_size=100" | \
+        jq -r '.results[].name' > dest_tags.txt
+
+    - name: Debug: Show fetched destination tags
+      run: |
+        echo "Destination tags fetched:"
+        cat dest_tags.txt
+
+    - name: Find missing tags
+      id: find_missing_tags
+      run: |
+        missing_tags=$(comm -23 <(sort source_tags.txt) <(sort dest_tags.txt))
+        echo "missing_tags=$missing_tags" >> $GITHUB_ENV
+        echo "Missing tags: $missing_tags"
+
+    - name: Build and Push Missing Tags
+      if: env.missing_tags != ''
+      run: |
+        for tag in $missing_tags; do
+          echo "Updating Dockerfile with tag: $tag"
+          sed -i "s|^FROM bitnami/mariadb:.*|FROM bitnami/mariadb:$tag|" Dockerfile
+          echo "Building and pushing tag: $tag"
+          docker build --platform linux/amd64,linux/arm64 \
+            --tag ${{ secrets.DOCKER_USERNAME }}/mariadb:$tag \
+            --push .
+        done
+        
