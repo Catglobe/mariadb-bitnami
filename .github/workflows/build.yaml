@@ -44,17 +44,12 @@ jobs:
         cat source_tags.txt
         echo "Destination tags fetched:"
         cat dest_tags.txt
-
-    - name: Check if source tags list is empty
-      id: check_source_tags
-      run: |
         if [ ! -s source_tags.txt ]; then
           echo "No tags matching debian-12 found, skipping build."
           exit 0
         fi
 
     - name: Build and Push Missing Tags
-      if: env.missing_tags != ''
       run: |
         missing_tags=$(comm -23 <(sort source_tags.txt) <(sort dest_tags.txt))
         for tag in $missing_tags; do
