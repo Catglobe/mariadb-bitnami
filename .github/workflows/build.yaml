@@ -32,10 +32,18 @@ jobs:
         curl -s "https://hub.docker.com/v2/repositories/bitnami/mariadb/tags/?page_size=100" | \
         jq -r '.results | sort_by(.last_updated) | reverse | map(select(.name | test("^[0-9]+\\.[0-9]+\\.[0-9]+-debian-12"))) | .[].name' > source_tags.txt
 
-    - name: Debug: Show fetched source tags
+    - name: Fetch destination tags
+      id: fetch_dest_tags
+      run: |
+        curl -s "https://hub.docker.com/v2/repositories/catglobe/mariadb/tags/?page_size=100" | \
+        jq -r '.results[].name' > dest_tags.txt
+
+    - name: Show fetched source tags
       run: |
         echo "Source tags fetched:"
         cat source_tags.txt
+        echo "Destination tags fetched:"
+        cat dest_tags.txt
 
     - name: Check if source tags list is empty
       id: check_source_tags
@@ -44,17 +52,6 @@ jobs:
           echo "No tags matching debian-12 found, skipping build."
           exit 0
         fi
-
-    - name: Fetch destination tags
-      id: fetch_dest_tags
-      run: |
-        curl -s "https://hub.docker.com/v2/repositories/catglobe/mariadb/tags/?page_size=100" | \
-        jq -r '.results[].name' > dest_tags.txt
-
-    - name: Debug: Show fetched destination tags
-      run: |
-        echo "Destination tags fetched:"
-        cat dest_tags.txt
 
     - name: Find missing tags
       id: find_missing_tags
