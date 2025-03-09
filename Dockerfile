@@ -1,4 +1,4 @@
-FROM bitnami/mariadb:11.6.2-debian-12-r0@sha256:1903a4cec8cdb3eb157e05c6cb65ef761445468da6c01bb54be4e16561b2a7c6
+FROM bitnami/mariadb:11.7.2-debian-12-r0@sha256:16a7dae804fbc527af719daea760744071b07c96d6c0523861d9f3d57150f331
 
 USER 0
 RUN install_packages zstd awscli
